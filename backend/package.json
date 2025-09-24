@@ -1,0 +1,14 @@
+{
+  "name": "ip-address-backend",
+  "version": "1.0.0",
+  "description": "Backend server for IP address display app",
+  "main": "server.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch server.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
