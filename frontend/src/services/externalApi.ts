@@ -68,29 +68,27 @@ export interface ExternalIpInfo {
   longitude?: number;
 }
 
-// IPアドレスを取得する関数（IPv4優先、フォールバックでIPv6）
-export const getExternalIpInfo = async (): Promise<ExternalIpInfo> => {
-  const corsEnabledServices = EXTERNAL_IP_SERVICES.filter(s => s.corsEnabled !== false);
-
-  for (const service of corsEnabledServices) {
-    try {
-      const response = await axios.get(service.url, {
-        timeout: 5000,
-        headers: { 'Accept': 'application/json' }
-      });
-      const parsedData = service.parseResponse(response.data);
-      // IPv4が取得できたらすぐに返す
-      if (!parsedData.ip.includes(':')) {
-        return { ...parsedData, ipType: 'IPv4' };
-      }
-      // IPv6しか取れないサービスの結果は最後の手段として保持
-      return { ...parsedData, ipType: 'IPv6' };
-    } catch (error) {
-      console.warn(`Failed to get IP from ${service.name}:`, error);
-    }
+const fetchIp = async (url: string): Promise<string | null> => {
+  try {
+    const response = await axios.get<{ ip: string }>(url, {
+      timeout: 5000,
+      headers: { 'Accept': 'application/json' }
+    });
+    return response.data.ip;
+  } catch {
+    return null;
   }
+};
 
-  throw new Error('Failed to retrieve IP address from all services');
+// IPv4とIPv6を並列取得する
+export const getDualStack = async (): Promise<{ ipv4: string | null; ipv6: string | null }> => {
+  const [ipv4, ipv6raw] = await Promise.all([
+    fetchIp('https://api.ipify.org?format=json'),  // IPv4専用
+    fetchIp('https://api6.ipify.org?format=json'),  // IPv6専用（なければnull）
+  ]);
+  // api6 が IPv4 を返してきた場合（環境によっては起こりうる）は除外
+  const ipv6 = ipv6raw?.includes(':') ? ipv6raw : null;
+  return { ipv4, ipv6 };
 };
 
 // デュアルスタック（IPv4とIPv6両方）を取得する関数

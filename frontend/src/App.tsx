@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiRefreshCw, FiCopy, FiCheck, FiWifi, FiMonitor, FiSmartphone } from 'react-icons/fi';
-import { getExternalIpInfo, getBrowserInfo } from './services/externalApi';
+import { getDualStack, getBrowserInfo } from './services/externalApi';
 import IPDisplay from './components/IPDisplay';
 import InfoCard from './components/InfoCard';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -17,13 +17,14 @@ function App(): React.JSX.Element {
     setLoading(true);
     setError(null);
     try {
-      // 外部APIから実際のIPアドレスを取得
-      const externalData = await getExternalIpInfo();
-      const browserInfo = getBrowserInfo();
-      
+      const [{ ipv4, ipv6 }, browserInfo] = await Promise.all([
+        getDualStack(),
+        Promise.resolve(getBrowserInfo()),
+      ]);
+
       const data: IpInfo = {
-        ip: externalData.ip,
-        ipType: externalData.ipType,
+        ipv4,
+        ipv6,
         timestamp: new Date().toISOString(),
         headers: {
           userAgent: browserInfo.userAgent,
@@ -56,8 +57,9 @@ function App(): React.JSX.Element {
   }, []);
 
   const handleCopy = (): void => {
-    if (ipInfo?.ip) {
-      navigator.clipboard.writeText(ipInfo.ip);
+    const ip = ipInfo?.ipv4 ?? ipInfo?.ipv6;
+    if (ip) {
+      navigator.clipboard.writeText(ip);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -68,8 +70,7 @@ function App(): React.JSX.Element {
   };
 
   const getDeviceIcon = (): React.JSX.Element => {
-    if (!ipInfo?.browser) return <FiMonitor />;
-    if (ipInfo.browser.isMobile) return <FiSmartphone />;
+    if (ipInfo?.browser?.isMobile) return <FiSmartphone />;
     return <FiMonitor />;
   };
 
@@ -97,11 +98,9 @@ function App(): React.JSX.Element {
           </div>
         ) : ipInfo ? (
           <>
-            <IPDisplay 
-              ip={ipInfo.ip} 
-              ipType={ipInfo.ipType}
-              onCopy={handleCopy}
-              copied={copied}
+            <IPDisplay
+              ipv4={ipInfo.ipv4}
+              ipv6={ipInfo.ipv6}
             />
 
             <div className="action-buttons">
@@ -137,11 +136,10 @@ function App(): React.JSX.Element {
                 ]}
               />
 
-              <InfoCard 
+              <InfoCard
                 title="接続情報"
                 icon={<FiWifi />}
                 items={[
-                  { label: 'IPタイプ', value: ipInfo.ipType },
                   { label: '言語', value: ipInfo.headers?.language?.split(',')[0] || '不明' },
                   { label: 'タイムスタンプ', value: new Date(ipInfo.timestamp).toLocaleString('ja-JP') }
                 ]}
