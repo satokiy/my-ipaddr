@@ -9,8 +9,8 @@ export interface BrowserInfo {
 }
 
 export interface IpInfo {
-  ip: string;
-  ipType: string;
+  ipv4: string | null;
+  ipv6: string | null;
   timestamp: string;
   headers: {
     userAgent: string | null;
