@@ -2,6 +2,7 @@
   "name": "ip-address-frontend",
   "version": "1.0.0",
   "private": true,
+  "homepage": "https://satokiy.github.io/my-ipaddr",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
